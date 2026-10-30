@@ -5,3 +5,5 @@ https://learn.microsoft.com/en-us/power-bi/create-reports/sample-revenue-opportu
 - power-bi-detail.png: the Detail page (Opportunity Analysis Report), filtered to one product.
 - power-bi-select-product.png, revenue-opportunity-dashboard.png: more views of the same report and its dashboard.
 The screenshots are from 2023; the sample has been refreshed since, so small differences in wording are expected.
+
+Microsoft Learn documentation content, including these screenshots, is licensed under Creative Commons Attribution 4.0 (CC BY 4.0) by Microsoft.
