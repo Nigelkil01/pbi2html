@@ -166,10 +166,12 @@ def _visual(data, model, warnings, page):
     visual = data.get("visual", {})
     kind = visual.get("visualType", "unknown")
     position = data.get("position", {})
-    title = "Values by Category"
+    title = None
     for entry in visual.get("visualContainerObjects", {}).get("title", []):
-        title = _literal(entry.get("properties", {}).get("text", {})) or title
-    result = {"id": data.get("name", ""), "type": kind, "title": title,
+        text = _literal(entry.get("properties", {}).get("text", {}))
+        if text is not None:
+            title = text
+    result = {"id": data.get("name", ""), "type": kind, "title": title or "",
               "x": position.get("x", 0), "y": position.get("y", 0),
               "w": position.get("width", 0), "h": position.get("height", 0),
               "category": None, "values": [], "rows": [], "text": None}
@@ -198,7 +200,16 @@ def _visual(data, model, warnings, page):
         category = categories[0] if categories else None
         result["category"] = category["label"] if category else None
         result["values"] = [v["label"] for v in values]
-        if kind == "tableEx" and not category and values and all(v["kind"] == "Column" and not v["aggregation"] for v in values):
+        if title is None:
+            result["title"] = " and ".join(result["values"])
+            if category:
+                result["title"] += (" by " if result["title"] else "") + category["label"]
+        if kind in ("slicer", "advancedSlicerVisual") and not category and len(values) == 1 and values[0]["kind"] == "Column":
+            field = values[0]
+            result["category"] = field["label"]
+            result["values"] = []
+            result["rows"] = [[_scalar(value)] for value in model.table(field["table"])[field["column"]].drop_duplicates()]
+        elif kind == "tableEx" and not category and values and all(v["kind"] == "Column" and not v["aggregation"] for v in values):
             if len({v["table"] for v in values}) != 1:
                 raise ValueError("table columns from different tables are unsupported")
             frame = model.table(values[0]["table"])

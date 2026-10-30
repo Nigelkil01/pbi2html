@@ -16,7 +16,23 @@ class ReaderTests(unittest.TestCase):
         region = next(v for v in report["pages"][0]["visuals"] if v["id"] == "eaf58d9fd08140688010")
         self.assertEqual(region["category"], "Region")
         self.assertEqual(len(region["rows"]), 3)
+        self.assertEqual(region["title"], "Opportunity Count by Region")
+        slicer = next(v for v in report["pages"][0]["visuals"] if v["type"] == "slicer")
+        self.assertEqual(slicer["category"], "Product Code")
+        self.assertTrue(slicer["rows"])
+        self.assertEqual(len(slicer["rows"]), len({row[0] for row in slicer["rows"]}))
+        products = _Model("samples/Revenue-Opportunities.pbix").table("Product")["Product Code"].drop_duplicates()
+        self.assertEqual({row[0] for row in slicer["rows"]}, set(products))
+        self.assertEqual(next(v for v in report["pages"][0]["visuals"] if v["id"] == "772b1906500006b78011")["title"], "Pipeline by Stage")
         json.dumps(report)
+
+    def test_revenue_card_matches_plain_sum(self):
+        path = "samples/Revenue-Opportunities.pbix"
+        report = read(path)
+        card = next(v for p in report["pages"] for v in p["visuals"] if v["id"] == "d76a83b307156a9b4281")
+        revenue = card["rows"][0][1 + card["values"].index("Revenue")]
+        self.assertEqual(revenue, _Model(path).table("Calculations")["ProductRevenue"].sum())
+        self.assertEqual(revenue, 1968250939)
 
     def test_calendar_relationship_populates_chart_and_tooltip(self):
         report = read("samples/Revenue-Opportunities.pbix")
@@ -26,6 +42,7 @@ class ReaderTests(unittest.TestCase):
         self.assertEqual(len(chart["rows"]), 12)
         self.assertEqual(sum(row[1] for row in chart["rows"]), 1968250939)
         self.assertEqual(sum(row[2] for row in chart["rows"]), 458)
+        self.assertEqual(chart["title"], "Revenue and Opportunity Count by Year Month")
         self.assertEqual(sum(row[1] for row in tooltip["rows"]), 458)
         self.assertFalse(any("no active relationship from Calculations to Calendar" in w for w in report["warnings"]))
 
@@ -34,6 +51,17 @@ class ReaderTests(unittest.TestCase):
         self.assertEqual(len(report["pages"]), 3)
         self.assertTrue(any("unsupported measure" in warning for warning in report["warnings"]))
         self.assertTrue(any(v["text"] for page in report["pages"] for v in page["visuals"] if v["type"] == "textbox"))
+        visuals = {v["id"]: v for page in report["pages"] for v in page["visuals"]}
+        model = _Model("samples/Corporate-Spend.pbix")
+        for visual_id, table, column, count in (
+            ("aca2e102c59a26b226c2", "Toggle for variance to plan", "# / %", 2),
+            ("3c278b3793b3d06103cb", "Toggle for breakdown", "Breakdown by", 5),
+        ):
+            visual = visuals[visual_id]
+            self.assertEqual(visual["category"], column)
+            self.assertEqual(len(visual["rows"]), count)
+            self.assertEqual({row[0] for row in visual["rows"]}, set(model.table(table)[column].drop_duplicates()))
+            self.assertFalse(any(visual_id in warning and "column has no aggregation" in warning for warning in report["warnings"]))
 
     def test_aggregations_and_relationship(self):
         class Model:
@@ -56,6 +84,9 @@ class ReaderTests(unittest.TestCase):
                   ("total", "avg", "count", "counta", "distinct")]
         self.assertEqual(model.rows(category, values), [["A", 6, 3, 2, 2, 2], ["B", 8, 8, 1, 1, 1]])
         self.assertEqual(model.rows(None, values)[0][0:3], [None, 14, 14 / 3])
+        model.tables["Groups"] = pd.DataFrame({"Key": [1, 1, 2], "Name": ["A", "A", "B"]})
+        with self.assertRaises(pd.errors.MergeError):
+            model.rows(category, values)
 
     def test_invalid_file_is_a_warning(self):
         report = read("missing.pbix")
