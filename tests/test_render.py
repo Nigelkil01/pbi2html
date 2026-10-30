@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 import unittest
 
-from pbi2html.render import chart, to_html, to_pdf, visual_body
+from pbi2html.render import chart, formatted, to_html, to_pdf, visual_body
 
 
 REPORT = {
@@ -35,6 +35,53 @@ class RenderTests(unittest.TestCase):
         self.assertIn('Sample warning', result)
         self.assertIn('page-break-before:always', result)
 
+    def test_subtitle_is_escaped(self):
+        report = {'pages': [{'visuals': [{'subtitle': 'A & B'}]}]}
+        self.assertIn('A &amp; B', to_html(report))
+
+    def test_chart_uses_report_theme(self):
+        result = chart({'type': 'treemap', 'rows': [['A', 1], ['B', 2]], 'colors': ['#123456', '#abcdef']})
+        self.assertIn('fill="#123456"', result)
+        self.assertIn('fill="#abcdef"', result)
+
+    def test_matrix_totals_and_currency_format(self):
+        body = visual_body({'type': 'pivotTable', 'values': ['Group', 'Revenue'],
+            'rows': [['A', 15.6], ['B', 20.4]], 'formats': [None, r'\$#,0'],
+            'matrix_categories': 1, 'matrix_totals': [[['A', 15.6], ['B', 20.4]]],
+            'grand_total': [36.0]})
+        self.assertEqual(body.count('class="total"'), 1)
+        self.assertIn('$16', body)
+        self.assertIn('$36', body)
+        nested = visual_body({'type': 'pivotTable', 'values': ['Size', 'Region', 'Partner', 'Count'],
+            'rows': [['Large', 'East', 'A', 1], ['Large', 'East', 'B', 2]],
+            'matrix_categories': 3,
+            'matrix_totals': [[['Large', 3]], [['Large', 'East', 3]],
+                              [['Large', 'East', 'A', 1], ['Large', 'East', 'B', 2]]],
+            'grand_total': [3]})
+        self.assertEqual(nested.count('class="total"'), 3)
+
+    def test_percentage_formatting_in_tables_and_cards(self):
+        self.assertEqual(formatted(0.25, '0.00%'), '25.00%')
+        self.assertEqual(formatted(-0.125, '0.0%'), '-12.5%')
+        body = visual_body({'type': 'pivotTable', 'values': ['Rate'], 'rows': [[0.25]], 'formats': ['0.00%']})
+        self.assertIn('<td>25.00%</td>', body)
+        card = visual_body({'type': 'card', 'values': ['Rate'], 'rows': [[None, 0.25]], 'formats': ['0.00%']})
+        self.assertIn('>25.00%</strong>', card)
+
+    def test_print_tables_are_paginated_outside_the_fixed_canvas(self):
+        result = to_html(REPORT)
+        canvas_end = result.index('</div><div class="print-table">')
+        self.assertLess(result.index('class="visual table-visual"'), canvas_end)
+        self.assertIn('Full table follows after this page.', result)
+        self.assertIn('class="print-table"', result[canvas_end:])
+        self.assertIn('.print-table .scroll { overflow:visible; }', result)
+        self.assertIn('.print-table thead { display:table-header-group; }', result)
+
+    def test_axis_titles_use_fields(self):
+        body = chart({'type': 'barChart', 'category': 'Stage', 'values': ['Count'], 'rows': [['A', 4]]})
+        self.assertIn('>Stage</text>', body)
+        self.assertIn('>Count</text>', body)
+
     def test_maps_are_labeled_unsupported(self):
         for kind in ('map', 'shapeMap', 'filledMap'):
             with self.subTest(kind=kind):
@@ -59,9 +106,9 @@ class RenderTests(unittest.TestCase):
         self.assertIn('April', body)
         self.assertIn('May', body)
         self.assertNotIn('<strong', body)
-        card = visual_body({'type': 'card', 'values': ['Revenue'], 'rows': [[None, 1968250939.0]]})
-        self.assertIn('title="$1,968,250,939.0"', card)
-        self.assertIn('$1.97B', card)
+        card = visual_body({'type': 'card', 'values': ['Revenue'], 'formats': [r'\$#,0'], 'rows': [[None, 1968250939.0]]})
+        self.assertIn('title="$1,968,250,939"', card)
+        self.assertIn('$1.97bn', card)
 
     @unittest.skipUnless(shutil.which('chromium') and shutil.which('qpdf'), 'chromium and qpdf required')
     def test_locked_pdf(self):

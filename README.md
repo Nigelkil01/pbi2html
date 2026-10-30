@@ -46,12 +46,13 @@ Never type the password into the command itself.
 
 | Converts | Shown as "not supported yet" or a warning |
 |---|---|
-| Pages, positions and titles | Maps, action buttons, multi-field pivot tables |
-| Bar, column, line and combo charts | Report, page and visual filters (listed, not applied) |
-| Pie, donut and treemap | Complex DAX measures |
-| Cards, tables, slicers, text | Hidden pages, themes, colour rules, bookmarks, custom visuals |
+| Pages, positions and titles | Maps and action buttons |
+| Bar, column, line and combo charts | Advanced filters and complex DAX measures |
+| Pie, donut and treemap | Custom visuals and conditional formatting |
+| Cards, tables, slicers, text | Hidden pages, colour rules, bookmarks, custom visuals |
+| Matrix rows, subtotals, theme palette and saved basic filters | Advanced matrix formatting and interactions |
 
-The HTML is a static report: clicking one chart does not filter the others.
+Saved report, page and visual filters support categorical membership, negation and comparisons across active many-to-one relationships; unsupported expressions produce warnings. The HTML is a static report: clicking one chart does not filter the others. In the PDF, full tables follow their report page on continuation pages, with column headings repeated. Matrix rows include grouped subtotals and a grand total. Basic numeric formats come from the model; conditional cell formatting and expand/collapse controls are not reproduced. Theme palettes, basic saved series colours and two-colour gradients are used for charts; other visual-specific colour rules are not applied.
 
 ## How it works
 
@@ -79,7 +80,7 @@ An agent took `samples/Corporate-Spend.pbix` apart with REA (Reverse Engineer An
 - Two pages carry nine filters; one selects only the year 2014.
 - One chart's colours come from a rule driven by a measure.
 
-The reader does not keep hidden pages or colour rules yet, and does not apply filters. Those come next.
+The reader does not keep hidden pages or all colour rules yet.
 
 ## Tests
 
@@ -89,13 +90,13 @@ The reader does not keep hidden pages or colour rules yet, and does not apply fi
 
 ## Samples
 
-`samples/` holds two of Microsoft's public sample reports
-([microsoft/powerbi-desktop-samples](https://github.com/microsoft/powerbi-desktop-samples), MIT licence).
+`samples/` holds Microsoft's public sample reports
+([microsoft/powerbi-desktop-samples](https://github.com/microsoft/powerbi-desktop-samples), MIT licence). `Revenue-Opportunities-original.pbix` is from `new-power-bi-service-samples/Revenue Opportunities.pbix`; it is the version used by Microsoft’s reference screenshots. The existing Revenue Opportunities sample is a later refresh.
 
 ## Next
 
-- Apply filters before working out the numbers.
-- Keep hidden pages, themes and colour rules.
+- Extend support for additional saved filter expressions.
+- Keep hidden pages and support more visual-specific colour rules.
 - Draw maps.
 - Mortgage-style sample data.
 - An overnight drop folder: every new `.pbix` in a folder converted by morning, with a note on what did not convert.
