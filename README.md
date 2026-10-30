@@ -19,13 +19,12 @@ The terminal lists warnings: parts of the report that did not convert, in plain 
 
 ## Try it safely in Claude Code on the web
 
-1. Open [claude.ai/code](https://claude.ai/code) and pick this repository.
+1. Open [claude.ai/code](https://claude.ai/code) and pick this repository (github.com/Nigelkil01/pbi2html).
    It runs in a cloud sandbox: nothing touches your computer or company systems.
 2. Ask Claude: "Convert samples/Revenue-Opportunities.pbix."
    The project's Claude skill (`.claude/skills/pbi2html/`) sets it up, runs it and explains each warning.
 3. To try your own report, add a `.pbix` to `samples/` first. Use sample data, never real company data.
 
-The repository is private. Ask its owner for access.
 
 ## Sharing with executives
 
